@@ -1,5 +1,5 @@
 ---@type mod_calllbacks
-local M = {}
+local M = { api_version = 0, version = "1.1.0" }
 
 ---@type brain_function
 _G["Vibrant_Biomes.plant"] = function(body)
