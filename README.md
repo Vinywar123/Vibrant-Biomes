@@ -2,7 +2,7 @@
 Explore an enhanced version of the game with new enemies and plants.
 Each biome gets many little aditions to make each feel more complete
 
-Version 1.0.1
+Version 1.1.0
 
 dont forget to rename the file to "Vibrant_Biomes"
 
