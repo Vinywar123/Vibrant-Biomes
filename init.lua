@@ -245,6 +245,126 @@ _G["Vibrant_Biomes.squishy_seeker_brain"] = function(body)--TODO not chasing pla
     brain.values[4] = target_y
     return brain
 end
+---@type brain_function
+_G["Vibrant_Biomes.Jumping_Trapweed_brain"] = function(body)--TODO not chasing player
+
+	local state = body.values[1] or 0 
+	local aggro_timer = body.values[2] or 600 -- timer for giving up on its target
+    local target_x = body.values[3] or body.cost_center_x
+    local target_y = body.values[4] or body.cost_center_y
+
+	local brain = {}
+
+    local ally_avoid_range = 10
+    local wall_avoid_range = 10
+
+    local health = body.health
+    local max_health = body.max_health
+
+	brain.movement = brain.movement or 0
+	brain.rotation = brain.rotation or 0
+
+	local closest_enemy, closest_enemy_id, closest_dist = nil, 0, 200  -- aggro range set to 200
+    local bodies = get_visible_bodies(body.id, 200, true)
+
+    for i, b in ipairs(bodies) do
+		--chases enemies
+		if b.team ~= body.team then
+			closest_enemy = b
+			closest_enemy_id = b.id
+			closest_dist = b.dist
+		end
+		-- avoids allys
+		if b.team == body.team then
+			avoid_body(body, brain, b, ally_avoid_range)
+		end
+    end
+
+	if state == 0 then
+		brain.ability = true
+
+		brain.rotation = rand_normal() - 0.1*body.angular_velocity
+		if closest_enemy then
+			state = 1
+		end
+
+		if (body.wall_dist > 30) then
+			brain.movement = 1
+			local target_x = body.cost_center_x + (body.wall_dx * -1200)
+			local target_y = body.cost_center_y + (body.wall_dy * -1200)
+			move_towards(body, brain, target_x, target_y)
+		end
+		if (body.wall_dist > 10) then
+			brain.rotation = .5
+		end
+
+	elseif state == 1 then -- goes to last known position for the chance of finding hte player
+		if closest_enemy then
+			brain.ability = false
+			target_x = closest_enemy.cost_center_x
+			target_y = closest_enemy.cost_center_y
+			-- uses mouse thing for better aim
+			brain.grab_target_x = target_x
+			brain.grab_target_y = target_y
+	
+			brain.grab_weight = 1
+
+			local dir_x = closest_enemy.cost_center_x - body.cost_center_x
+			local dir_y = closest_enemy.cost_center_y - body.cost_center_y
+			
+			dir_x, dir_y = normalize(dir_x, dir_y)
+
+			brain.rotation = cross(body.dir_x, body.dir_y, dir_x, dir_y)
+			
+			brain.movement = 1
+		end
+
+		if (body.wall_dist < 10) then
+			brain.rotation = math.sin(body.age)
+		end
+
+		if closest_enemy_id == 0 then
+			state = 2
+			aggro_timer = DEAGGRO_TIME
+		end
+
+	elseif state == 2 then
+
+		brain.ability = false
+		-- uses mouse thing for better aim
+		brain.grab_target_x = target_x
+		brain.grab_target_y = target_y
+
+		brain.grab_weight = 1
+
+		local dir_x = target_y - body.cost_center_x
+		local dir_y = target_x - body.cost_center_y
+		
+		dir_x, dir_y = normalize(dir_x, dir_y)
+
+		brain.rotation = cross(body.dir_x, body.dir_y, dir_x, dir_y)
+		
+		brain.movement = 1
+		aggro_timer = aggro_timer-1
+
+		if closest_enemy_id ~= 0 then
+			state = 1
+		end
+
+		if aggro_timer <= 0 then
+			state = 0
+		end
+	end
+    -- update our custom values
+    brain.values = {}
+	brain.values[1] = state
+    brain.values[2] = aggro_timer
+    brain.values[3] = target_x
+    brain.values[4] = target_y
+    return brain
+end
+
+
 
 ---@type brain_function
 _G["Vibrant_Biomes.Basher_brain"] = function(body)--TODO not chasing player
@@ -844,7 +964,12 @@ function M.post(api, config)
 		register_creature(
 			api.acquire_id("Vibrant_Biomes.Angler_Weed"),
 			"data/scripts/lua_mods/mods/Vibrant_Biomes/bodies/Angler_Weed.bod",
-			"Vibrant_Biomes.Molusk_brain"
+			"Vibrant_Biomes.plant"
+		)
+		register_creature(
+			api.acquire_id("Vibrant_Biomes.Jumping_Trapweed"),
+			"data/scripts/lua_mods/mods/Vibrant_Biomes/bodies/Jumping_Trapweed.bod",
+			"Vibrant_Biomes.Jumping_Trapweed_brain"
 		)
 		register_creature(
 			api.acquire_id("Vibrant_Biomes.gyre_drifter"),
@@ -869,12 +994,13 @@ function M.post(api, config)
 		add_creature_spawn_chance("STRT", api.acquire_id("Vibrant_Biomes.Squid"), .01*Animal_SpawnRates, 3)
 
 		
-		add_plant_spawn_chance("TOXC", api.acquire_id("Vibrant_Biomes.Acid_Molusk"), .05*Plant_SpawnRates, 5)
+		add_plant_spawn_chance("TOXC", api.acquire_id("Vibrant_Biomes.Acid_Molusk"), .02*Plant_SpawnRates, 5)
 		add_plant_spawn_chance("TOXC", api.acquire_id("Vibrant_Biomes.Angler_Weed"), .08*Plant_SpawnRates, 5)
+		add_plant_spawn_chance("TOXC", api.acquire_id("Vibrant_Biomes.Jumping_Trapweed"), .08*Plant_SpawnRates, 5)
 
 
 
-		add_creature_spawn_chance("ICEE", api.acquire_id("Vibrant_Biomes.drifter"), .06*Animal_SpawnRates, 1)
+		add_creature_spawn_chance("ICEE", api.acquire_id("Vibrant_Biomes.drifter"), .08*Animal_SpawnRates, 1)
 		add_creature_spawn_chance("ICEE", api.acquire_id("Vibrant_Biomes.squishy_seeker"), .02*Animal_SpawnRates, 1)
 		add_creature_spawn_chance("ICEE", api.acquire_id("Vibrant_Biomes.Linked_Generator"), .01*Animal_SpawnRates, 1)	
 
