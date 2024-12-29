@@ -4,6 +4,8 @@ Each biome gets many little aditions to make each feel more complete
 
 Version 1.0.1
 
+dont forget to rename the file to "Vibrant_Biomes"
+
 ## Settings
 - `Plant_SpawnRates: number = 1.0` a range between 0-1 determining plant spawn rates
 - `Animal_SpawnRates: number = 1.0` a range between 0-1 determining plant spawn rates
